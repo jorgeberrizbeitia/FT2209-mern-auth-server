@@ -1,7 +1,8 @@
 const router = require("express").Router();
 const bcrypt = require("bcryptjs");
 const User = require("../models/User.model");
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
+const isAuthenticated = require("../middlewares/auth.middlewares");
 
 // aqui iran nuestras rutas de Autenticación
 
@@ -111,12 +112,16 @@ router.post("/login", async (req, res, next) => {
 
 
 // GET "/api/auth/verify" => para que el BE le diga al FE si el usuario ya ha sido validado
-router.get("/verify", (req, res, next) => {
+router.get("/verify", isAuthenticated, (req, res, next) => {
 
   // esta ruta va a verificar que el usuario tiene un Token valido
   // normalmente se utilizará para la primera vez que el usuario visita la web
 
-  res.status(200).json("Token valido, usuario ya logeado")
+  // como tenemos acceso a informacion del usuario haciendo esta llamada???
+  console.log(req.payload)
+  // para acceder a req.payload, DEBEMOS tener isAuthenticated en la Ruta.
+
+  res.status(200).json({ user: req.payload })
 
 })
 

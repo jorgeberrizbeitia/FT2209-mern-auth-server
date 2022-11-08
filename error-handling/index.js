@@ -9,6 +9,12 @@ module.exports = (app) => {
     // always logs the error
     console.error("ERROR", req.method, req.path, err);
 
+    // ! AQUI AGREGAMOS EL ERROR HANDLING DE JWT PARA QUE EN VEZ DE ERROR 500 ENVIE ERROR 401
+    if (err.name === "UnauthorizedError") {
+      res.status(401).json({errorMessage: "Token no valido o no hay token"})
+      return;
+    }
+
     // only render if the error ocurred before sending the response
     if (!res.headersSent) {
       res
