@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const bcrypt = require("bcryptjs");
 const User = require("../models/User.model");
+const jwt = require("jsonwebtoken")
 
 // aqui iran nuestras rutas de Autenticación
 
@@ -48,10 +49,76 @@ router.post("/signup", async (req, res, next) => {
 })
 
 // POST "/api/auth/login" => validar credenciales del usuario
+router.post("/login", async (req, res, next) => {
+
+  console.log(req.body)
+  const { email, password } = req.body
+
+  // 1. Validaciones de backend
+
+  // que todos los campos esten llenos
+  if (email === "" || password === "") {
+    res.status(400).json({ errorMessage: "Debe tener email y contraseña" })
+    return; // detiene la ejecución de la ruta
+  }
+
+  try {
+    
+    // que el usuario exista
+    const foundUser = await User.findOne({email: email})
+    console.log(foundUser)
+    if (foundUser === null) {
+      res.status(400).json({errorMessage: "Credenciales no validas"})
+      return;
+    }
+
+    // que la contraseña sea correcta
+    const isPasswordValid = await bcrypt.compare(password, foundUser.password)
+    if (isPasswordValid === false) {
+      res.status(400).json({errorMessage: "Credenciales no validas"}) // buena practica (privacidad de usuarios) misma respuesta que anterior clausula de guardia
+      return;
+    }
+
+    // a partir de este punto, el usuario ha sido validado...
+
+    // 2. crear algo parecido a la sesión (TOKEN) y enviarlo al cliente
+    
+    // payload es la informacion del usuario dueño del Token
+    const payload = {
+      _id: foundUser._id,
+      email: foundUser.email
+      // ! si tuviesemos username, o role u otra info importante del usuario, tiene que ir aqui.
+    }
+
+    // a .sign se le pasan 3 argumentos
+    const authToken = jwt.sign(
+      payload, // la info del usuario, que será accesible en diferentes partes de server/client
+      process.env.TOKEN_SECRET, // palabra SUPER secreta que double encrypta el token.
+      { algorithm: "HS256", expiresIn: "6h" } // configuraciones adicionales del Token (Header)
+    )
+
+  
+    // enviar el Token al cliente
+    res.status(200).json({ authToken: authToken })
+  
+  
+  } catch (error) {
+    next(error)
+  }
+
+
+})
 
 
 // GET "/api/auth/verify" => para que el BE le diga al FE si el usuario ya ha sido validado
+router.get("/verify", (req, res, next) => {
 
+  // esta ruta va a verificar que el usuario tiene un Token valido
+  // normalmente se utilizará para la primera vez que el usuario visita la web
+
+  res.status(200).json("Token valido, usuario ya logeado")
+
+})
 
 
 module.exports = router;
